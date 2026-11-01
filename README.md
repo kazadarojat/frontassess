@@ -1,6 +1,5 @@
 
 <img width="2048" height="768" alt="image" src="https://github.com/user-attachments/assets/f0849802-b4de-4a3f-aadc-8ffb60c45afa" />
-# FrontStellar Assess
 
 **A multi-provider, multi-model AI benchmarking dashboard for inference speed, latency, and response comparison.**
 
