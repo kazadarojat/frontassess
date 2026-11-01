@@ -1,8 +1,8 @@
-# Frontassess
+
+<img width="2048" height="768" alt="image" src="https://github.com/user-attachments/assets/f0849802-b4de-4a3f-aadc-8ffb60c45afa" />
 # FrontStellar Assess
 
 **A multi-provider, multi-model AI benchmarking dashboard for inference speed, latency, and response comparison.**
-<img width="2048" height="768" alt="image" src="https://github.com/user-attachments/assets/f0849802-b4de-4a3f-aadc-8ffb60c45afa" />
 
 FrontStellar Assess is a web-based tool designed to test and compare language models across multiple API providers through a unified interface. It allows users to run the same prompt against selected models, inspect performance metrics, compare generated responses, visualize results, and export benchmark data.
 
