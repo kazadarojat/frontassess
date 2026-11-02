@@ -50,6 +50,13 @@ function sseWrite(res, obj) {
 }
 
 function readJsonBody(req, limit = 1024 * 1024) {
+  // Vercel Functions preparse JSON into req.body before this handler runs.
+  if (req.body !== undefined && req.body !== null) {
+    if (Buffer.byteLength(JSON.stringify(req.body)) > limit) {
+      return Promise.reject(new Error('Payload terlalu besar'));
+    }
+    return Promise.resolve(typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
+  }
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
@@ -476,7 +483,7 @@ function serveStatic(req, res, pathname) {
 
 /* ------------------------------------------------------------------ boot */
 
-const server = http.createServer((req, res) => {
+function requestHandler(req, res) {
   // Allow only configured web origins to access API from another domain.
   const origin = req.headers.origin;
   const allowed = (process.env.ALLOWED_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -498,8 +505,12 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res, pathname);
 
   sendJson(res, 404, { ok: false, error: 'Not found' });
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`FrontStellar Assess berjalan di http://localhost:${PORT}`);
-});
+module.exports = requestHandler;
+
+if (require.main === module) {
+  http.createServer(requestHandler).listen(PORT, () => {
+    console.log(`FrontStellar Assess berjalan di http://localhost:${PORT}`);
+  });
+}
