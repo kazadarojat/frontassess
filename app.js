@@ -4,8 +4,45 @@
 
 const $ = (id) => document.getElementById(id);
 
+// The static GitHub Pages frontend needs a separately hosted API server.
+const BACKEND_STORAGE_KEY = 'frontstellar:backend-origin:v1';
+function backendOrigin() {
+  const input = $('backendUrl');
+  const raw = (input ? input.value : '').trim().replace(/\\/+$/, '');
+  if (raw) {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
+      throw new Error('Gunakan URL backend HTTPS (HTTP hanya untuk localhost).');
+    }
+    if (url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+      throw new Error('Isi hanya origin backend, contoh https://nama-server.onrender.com');
+    }
+    return url.origin;
+  }
+  if (location.hostname.endsWith('.github.io')) {
+    throw new Error('Backend belum dikonfigurasi. GitHub Pages hanya menjalankan frontend. Isi URL backend Node.js yang telah di-deploy di bagian Koneksi.');
+  }
+  return location.origin;
+}
+
+async function backendFetch(path, options) {
+  const origin = backendOrigin();
+  let response;
+  try {
+    response = await fetch(origin + path, options);
+  } catch (_) {
+    throw new Error('Tidak bisa menghubungi backend di ' + origin + '. Periksa status server dan pengaturan CORS.');
+  }
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json') && !contentType.includes('text/event-stream')) {
+    throw new Error('Backend mengembalikan ' + (contentType || 'konten bukan API') + ' (HTTP ' + response.status + '), bukan respons API. Periksa URL backend dan rute ' + path + '.');
+  }
+  return response;
+}
+
 const els = {
   preset: $('preset'),
+  backendUrl: $('backendUrl'),
   baseUrl: $('baseUrl'),
   apiKey: $('apiKey'),
   toggleKey: $('toggleKey'),
@@ -342,7 +379,7 @@ async function connect() {
   }
 
   try {
-    const res = await fetch('/api/models', {
+    const res = await backendFetch('/api/models', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ baseUrl, apiKey }),
@@ -914,7 +951,7 @@ function retryDelay(attempt, retryAfter) {
 
 /** Kirim satu permintaan streaming; error provider dicatat di result, bukan dilempar. */
 async function streamOnce(result, controller) {
-  const res = await fetch('/api/chat', {
+  const res = await backendFetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(buildPayload(result)),
@@ -2875,6 +2912,10 @@ const prefersReduced =
 applyTheme(readStore(THEME_KEY) === 'light' ? 'light' : 'dark');
 applyMotion(readStore(MOTION_KEY) === 'reduced' || (readStore(MOTION_KEY) === null && prefersReduced));
 
+if (els.backendUrl) {
+  els.backendUrl.value = readStore(BACKEND_STORAGE_KEY) || '';
+  els.backendUrl.addEventListener('change', () => writeStore(BACKEND_STORAGE_KEY, els.backendUrl.value.trim()));
+}
 renderHistory();
 restoreSession();
 renderProviders();
