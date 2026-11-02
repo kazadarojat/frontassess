@@ -46,6 +46,13 @@
       </div>
 
       <label class="field">
+        <span class="field-label">URL backend FrontStellar (Node.js)</span>
+        <input id="backendUrl" type="url" spellcheck="false" autocomplete="off"
+               placeholder="https://nama-server.onrender.com" />
+      </label>
+      <p class="note">Untuk GitHub Pages, deploy server.js ke hosting Node.js terlebih dahulu, kemudian isi URL backend HTTPS di atas. Jangan masukkan URL API provider di kolom ini.</p>
+
+      <label class="field">
         <span class="field-label">Preset provider</span>
         <select id="preset">
           <option value="">— Pilih preset —</option>
@@ -82,8 +89,8 @@
       <button class="btn primary full" id="btnConnect">Uji Koneksi &amp; Tambah Provider</button>
 
       <p class="note" id="connNote">
-        Key hanya dikirim ke server lokal ini, lalu diteruskan ke provider. Provider yang berhasil
-        terhubung disimpan di browser ini (localStorage), bukan di server.
+        Key diteruskan melalui backend yang dikonfigurasi ke provider. Gunakan hanya backend tepercaya.
+        Perhatian: API key tersimpan di localStorage browser selama sesi provider disimpan.
       </p>
     </section>
 

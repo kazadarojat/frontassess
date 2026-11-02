@@ -18,7 +18,8 @@ const path = require('path');
 const { URL } = require('url');
 
 const PORT = Number(process.env.PORT || 5173);
-const PUBLIC_DIR = path.join(__dirname, 'public');
+const PUBLIC_DIR = fs.existsSync(path.join(__dirname, 'public', 'index.html'))
+  ? path.join(__dirname, 'public') : __dirname;
 const MODELS_TIMEOUT_MS = 30000;
 
 const MIME = {
@@ -476,6 +477,19 @@ function serveStatic(req, res, pathname) {
 /* ------------------------------------------------------------------ boot */
 
 const server = http.createServer((req, res) => {
+  // Allow only configured web origins to access API from another domain.
+  const origin = req.headers.origin;
+  const allowed = (process.env.ALLOWED_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (origin && allowed.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+  if (req.method === 'OPTIONS') {
+    res.writeHead(origin && allowed.includes(origin) ? 204 : 403);
+    return res.end();
+  }
   const { pathname } = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
   if (req.method === 'POST' && pathname === '/api/models') return handleModels(req, res);
