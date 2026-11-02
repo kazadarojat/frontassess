@@ -93,17 +93,17 @@ function validateProviderUrl(value) {
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
     throw new Error('URL provider hanya boleh berisi alamat HTTP(S) tanpa kredensial, query, atau fragment.');
   }
-  const host = url.hostname.toLowerCase().replace(/\\.$/, '');
+  const host = url.hostname.toLowerCase().replace(/[.]$/, '');
   const isLocal = host === 'localhost' || host.endsWith('.localhost') ||
     host === '127.0.0.1' || host === '::1' || host === '[::1]';
-  const isPrivateIp = /^10\\.|^127\\.|^0\\.|^169\\.254\\.|^192\\.168\\.|^172\\.(1[6-9]|2[0-9]|3[01])\\.|^100\\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\\./.test(host);
+  const isPrivateIp = /^(?:10[.]|127[.]|0[.]|169[.]254[.]|192[.]168[.]|172[.](?:1[6-9]|2[0-9]|3[01])[.]|100[.](?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])[.])/.test(host);
   if ((isLocal || isPrivateIp || host.endsWith('.internal') || host.endsWith('.local') || host === 'metadata.google.internal') && process.env.ALLOW_PRIVATE_PROVIDERS !== 'true') {
     throw new Error('Alamat API lokal atau jaringan privat tidak diizinkan pada server publik.');
   }
   if (process.env.VERCEL && url.protocol !== 'https:') {
     throw new Error('Backend publik hanya menerima alamat provider HTTPS.');
   }
-  return url.toString().replace(/\\/$/, '');
+  return url.toString().replace(/[/]$/, '');
 }
 
 function endpointCandidates(baseUrl, resource) {
