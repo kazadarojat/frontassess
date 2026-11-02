@@ -87,6 +87,25 @@ function stripSlash(value) {
 }
 
 /** Build candidate endpoints, tolerating a Base URL given with or without /v1. */
+function validateProviderUrl(value) {
+  let url;
+  try { url = new URL(value); } catch (_) { throw new Error('URL provider tidak valid.'); }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+    throw new Error('URL provider hanya boleh berisi alamat HTTP(S) tanpa kredensial, query, atau fragment.');
+  }
+  const host = url.hostname.toLowerCase().replace(/[.]$/, '');
+  const isLocal = host === 'localhost' || host.endsWith('.localhost') ||
+    host === '127.0.0.1' || host === '::1' || host === '[::1]';
+  const isPrivateIp = /^(?:10[.]|127[.]|0[.]|169[.]254[.]|192[.]168[.]|172[.](?:1[6-9]|2[0-9]|3[01])[.]|100[.](?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])[.])/.test(host);
+  if ((isLocal || isPrivateIp || host.endsWith('.internal') || host.endsWith('.local') || host === 'metadata.google.internal') && process.env.ALLOW_PRIVATE_PROVIDERS !== 'true') {
+    throw new Error('Alamat API lokal atau jaringan privat tidak diizinkan pada server publik.');
+  }
+  if (process.env.VERCEL && url.protocol !== 'https:') {
+    throw new Error('Backend publik hanya menerima alamat provider HTTPS.');
+  }
+  return url.toString().replace(/[/]$/, '');
+}
+
 function endpointCandidates(baseUrl, resource) {
   const base = stripSlash(baseUrl);
   const list = [`${base}/${resource}`];
@@ -165,7 +184,9 @@ async function handleModels(req, res) {
     return sendJson(res, 400, { ok: false, error: err.message });
   }
 
-  const baseUrl = stripSlash(body.baseUrl);
+  let baseUrl;
+  try { baseUrl = validateProviderUrl(stripSlash(body.baseUrl)); }
+  catch (err) { return sendJson(res, 400, { ok: false, error: err.message }); }
   const apiKey = String(body.apiKey || '').trim();
 
   if (!baseUrl) return sendJson(res, 400, { ok: false, error: 'API Base URL wajib diisi.' });
@@ -183,6 +204,7 @@ async function handleModels(req, res) {
         method: 'GET',
         headers: buildHeaders(apiKey),
         signal: AbortSignal.timeout(MODELS_TIMEOUT_MS),
+        redirect: 'error',
       });
       const text = await upstream.text();
       let data = null;
@@ -241,7 +263,9 @@ async function handleChat(req, res) {
     return sendJson(res, 400, { ok: false, error: err.message });
   }
 
-  const baseUrl = stripSlash(body.resolvedBase || body.baseUrl);
+  let baseUrl;
+  try { baseUrl = validateProviderUrl(stripSlash(body.resolvedBase || body.baseUrl)); }
+  catch (err) { return sendJson(res, 400, { ok: false, error: err.message }); }
   const apiKey = String(body.apiKey || '').trim();
   const model = String(body.model || '').trim();
   const prompt = String(body.prompt == null ? '' : body.prompt);
@@ -294,6 +318,7 @@ async function handleChat(req, res) {
         headers: buildHeaders(apiKey, { Accept: 'text/event-stream' }),
         body: JSON.stringify(payload),
         signal: controller.signal,
+        redirect: 'error',
       });
 
       if (response.ok && response.body) {
@@ -437,8 +462,11 @@ async function handleChat(req, res) {
     usage && typeof usage.completion_tokens === 'number' ? usage.completion_tokens : null;
   const promptTokens = usage && typeof usage.prompt_tokens === 'number' ? usage.prompt_tokens : null;
   const tokens =
-    completionTokens != null ? completionTokens : Math.max(chunks, Math.round(chars / 4));
-  const generationMs = ttft == null ? total : Math.max(total - ttft, 0.001);
+    completionTokens != null ? completionTokens : (chars > 0 ? Math.max(1, Math.round(chars / 4)) : 0);
+  const generationMs = ttft == null ? null : total - ttft;
+  // Avoid manufacturing a huge token/s figure when generation time rounds to zero.
+  const tps = generationMs != null && generationMs >= 1 && tokens > 0
+    ? tokens / (generationMs / 1000) : null;
 
   sseWrite(res, {
     type: 'done',
@@ -452,7 +480,7 @@ async function handleChat(req, res) {
       chars,
       chunks,
       reasoningChars,
-      tps: tokens > 0 ? tokens / (generationMs / 1000) : 0,
+      tps,
       finishReason,
     },
   });

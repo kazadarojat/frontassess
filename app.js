@@ -513,7 +513,7 @@ function saveSession() {
       id: p.id,
       label: p.label,
       baseUrl: p.baseUrl,
-      apiKey: p.apiKey,
+      // Do not persist API keys in localStorage.
       resolvedBase: p.resolvedBase,
       models: p.models,
     })),
@@ -552,7 +552,7 @@ function restoreSession() {
       id: p.id || p.baseUrl,
       label: p.label || providerLabel(p.baseUrl),
       baseUrl: p.baseUrl,
-      apiKey: p.apiKey || '',
+      apiKey: '',
       resolvedBase: p.resolvedBase || p.baseUrl,
       models: Array.isArray(p.models) ? p.models : [],
     }));
