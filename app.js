@@ -8,7 +8,7 @@ const $ = (id) => document.getElementById(id);
 const BACKEND_STORAGE_KEY = 'frontstellar:backend-origin:v1';
 function backendOrigin() {
   const input = $('backendUrl');
-  const raw = (input ? input.value : '').trim().replace(/\\/+$/, '');
+  const raw = (input ? input.value : '').trim().replace(/[/]+$/, '');
   if (raw) {
     const url = new URL(raw);
     if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
