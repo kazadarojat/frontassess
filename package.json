@@ -1,0 +1,13 @@
+{
+  "name": "frontstellar-assess",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local test bench: validate an OpenAI-compatible provider key, list available models, and benchmark TTFT / TPS / total latency across models side by side.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
