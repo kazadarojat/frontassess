@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FrontStellar Assess — Uji Provider &amp; Model AI</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0C0F'/%3E%3Cpath d='M8 21V11l8 5 8-5v10' stroke='%23B4F461' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+<!-- Cahaya latar bergerak; murni hiasan. -->
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<!-- Garis kemajuan tipis di paling atas untuk aksi yang sedang berjalan. -->
+<div class="top-progress" id="topProgress" hidden><i></i></div>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 21V11l8 5 8-5v10" /></svg>
+    <span class="brand-name">FrontStellar Assess</span>
+    <span class="brand-sub">Uji provider, model &amp; kecepatan inferensi</span>
+  </div>
+  <div class="top-actions">
+    <button type="button" class="icon-btn" id="btnKeys" title="Pintasan papan tombol" aria-label="Pintasan papan tombol">?</button>
+    <button type="button" class="icon-btn" id="btnMotion" title="Kurangi animasi" aria-pressed="false">Gerak</button>
+    <button type="button" class="icon-btn" id="btnTheme" title="Ganti tema terang / gelap" aria-pressed="false">Terang</button>
+    <div class="conn" id="connChip" data-state="idle">
+      <span class="conn-dot"></span>
+      <span id="connText">Belum terhubung</span>
+    </div>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- ───────────────────────────────────────────── rail -->
+  <aside class="rail">
+
+    <section class="block">
+      <div class="block-head">
+        <h2>Koneksi</h2>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Preset provider</span>
+        <select id="preset">
+          <option value="">— Pilih preset —</option>
+          <option value="https://api.openai.com/v1">OpenAI</option>
+          <option value="https://openrouter.ai/api/v1">OpenRouter</option>
+          <option value="https://api.groq.com/openai/v1">Groq</option>
+          <option value="https://api.deepseek.com/v1">DeepSeek</option>
+          <option value="https://api.together.xyz/v1">Together AI</option>
+          <option value="https://api.mistral.ai/v1">Mistral</option>
+          <option value="https://api.x.ai/v1">xAI (Grok)</option>
+          <option value="https://api.cerebras.ai/v1">Cerebras</option>
+          <option value="https://api.fireworks.ai/inference/v1">Fireworks</option>
+          <option value="https://generativelanguage.googleapis.com/v1beta/openai">Google Gemini (OpenAI-compat)</option>
+          <option value="http://localhost:11434/v1">Ollama (lokal)</option>
+          <option value="http://localhost:1234/v1">LM Studio (lokal)</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field-label">API Base URL</span>
+        <input id="baseUrl" type="url" spellcheck="false" autocomplete="off"
+               placeholder="https://api.openai.com/v1" />
+      </label>
+
+      <label class="field">
+        <span class="field-label">API Key</span>
+        <span class="input-group">
+          <input id="apiKey" type="password" spellcheck="false" autocomplete="off"
+                 placeholder="sk-..." />
+          <button type="button" class="ghost-btn" id="toggleKey" title="Tampilkan / sembunyikan">Lihat</button>
+        </span>
+      </label>
+
+      <button class="btn primary full" id="btnConnect">Uji Koneksi &amp; Tambah Provider</button>
+
+      <p class="note" id="connNote">
+        Key hanya dikirim ke server lokal ini, lalu diteruskan ke provider. Provider yang berhasil
+        terhubung disimpan di browser ini (localStorage), bukan di server.
+      </p>
+    </section>
+
+    <section class="block" id="providersBlock" hidden>
+      <div class="block-head">
+        <h2>Provider terhubung</h2>
+        <span class="count" id="providerCount">0</span>
+      </div>
+      <div class="provider-list" id="providerList"></div>
+      <p class="note" id="providerNote">
+        Tambahkan beberapa provider untuk menguji model lintas provider dalam satu kali uji. Daftar ini
+        ikut tersimpan, jadi provider yang sedang digunakan tetap ada saat aplikasi dibuka lagi.
+      </p>
+      <button type="button" class="btn full" id="btnForgetProviders">Lupakan provider tersimpan</button>
+    </section>
+
+    <section class="block grow">
+      <div class="block-head">
+        <h2>Model tersedia</h2>
+        <span class="count" id="modelCount">0</span>
+      </div>
+
+      <input id="modelFilter" class="filter" type="search" spellcheck="false"
+             placeholder="Filter model…" disabled />
+
+      <div class="model-list" id="modelList">
+        <p class="empty">Hubungkan provider untuk memuat daftar model.</p>
+      </div>
+
+      <div class="row">
+        <button class="ghost-btn" id="btnSelectAll" type="button" disabled>Pilih semua</button>
+        <button class="ghost-btn" id="btnSelectNone" type="button" disabled>Bersihkan</button>
+        <span class="spacer"></span>
+        <button class="ghost-btn accent" id="btnSelectFast" type="button" disabled title="Pilih hingga 4 model termurah/tercepat berdasarkan nama">Pilih 4 cepat</button>
+      </div>
+    </section>
+
+  </aside>
+
+  <!-- ───────────────────────────────────────────── main -->
+  <main class="main">
+
+    <section class="panel-prompt">
+      <div class="block-head">
+        <h2>Prompt uji</h2>
+        <span class="count" id="selectedCount">0 model dipilih</span>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Preset prompt</span>
+        <select id="promptPreset">
+          <option value="">— Prompt kustom —</option>
+          <option value="Sebutkan nama ibu kota Indonesia">Sebutkan nama ibu kota Indonesia</option>
+          <option value="Berapa hasil dari 15 dikali 8?">Berapa hasil dari 15 dikali 8?</option>
+          <option value="Kenalkan Siapa Kamu dalam 1 kalimat">Kenalkan siapa kamu (1 kalimat)</option>
+          <option value="Jelaskan Apa itu Gynoid dalam 1 Kalimat">Jelaskan apa itu Gynoid (1 kalimat)</option>
+          <option value="Cukup Jawab hanya : Hai Aku disini">Cukup jawab: “Hai Aku disini”</option>
+          <option value="Berikan 1 ide penelitian Medis singkat dalam 1 kalimat">1 ide penelitian medis (1 kalimat)</option>
+          <option value="Jelaskan Keunggulanmu dan kekuranganmu secara singkat dalam 1 kalimat.">Keunggulan &amp; kekuranganmu (1 kalimat)</option>
+        </select>
+      </label>
+
+      <textarea id="prompt" rows="4" spellcheck="false"
+        placeholder="Tulis satu prompt yang akan dikirim ke semua model terpilih…">Jelaskan secara singkat apa itu retrieval-augmented generation dan sebutkan satu keunggulannya.</textarea>
+
+      <details class="advanced">
+        <summary>Pengaturan lanjutan</summary>
+        <div class="adv-grid">
+          <label class="field">
+            <span class="field-label">System prompt <em>opsional</em></span>
+            <input id="system" type="text" spellcheck="false" placeholder="Kosongkan bila tidak perlu" />
+          </label>
+          <label class="field">
+            <span class="field-label">Temperature <em>kosong = default</em></span>
+            <input id="temperature" type="number" step="0.1" min="0" max="2" placeholder="default" />
+          </label>
+          <label class="field">
+            <span class="field-label">Max tokens <em>kosong = provider</em></span>
+            <input id="maxTokens" type="number" step="1" min="1" placeholder="default" />
+          </label>
+        </div>
+      </details>
+
+      <div class="run-mode">
+        <div class="run-mode-head">
+          <span class="field-label">Mode eksekusi</span>
+          <div class="segmented" id="modeToggle">
+            <button type="button" data-mode="parallel" class="active">Paralel</button>
+            <button type="button" data-mode="sequential">Berurutan</button>
+          </div>
+          <label class="gap-field" id="gapField" hidden>
+            <span class="field-label">Jeda antar model</span>
+            <input id="gapMs" type="number" min="0" step="250" value="1000" />
+            <span class="unit">ms</span>
+          </label>
+          <label class="gap-field" id="concField">
+            <span class="field-label">Model sekaligus</span>
+            <input id="concurrency" type="number" min="0" step="1" placeholder="semua" />
+            <span class="unit">model</span>
+          </label>
+        </div>
+        <div class="run-mode-head">
+          <label class="gap-field">
+            <span class="field-label">Ulangi</span>
+            <input id="repeats" type="number" min="1" max="10" step="1" value="1" />
+            <span class="unit">× per model</span>
+          </label>
+          <label class="gap-field">
+            <span class="field-label">Coba ulang saat 429</span>
+            <input id="retries" type="number" min="0" max="5" step="1" value="2" />
+            <span class="unit">kali</span>
+          </label>
+        </div>
+        <p class="run-mode-note" id="modeNote">
+          Semua model dijalankan bersamaan — paling cepat, tetapi berisiko kena 429 bila provider membatasi konkurensi.
+        </p>
+      </div>
+
+      <div class="run-row">
+        <button class="btn primary" id="btnRun" disabled>Jalankan uji</button>
+        <button class="btn danger" id="btnCancel" hidden>Batalkan</button>
+        <span class="run-hint" id="runHint">Pilih model lebih dulu, lalu jalankan uji.</span>
+      </div>
+    </section>
+
+    <!-- Balapan langsung: terlihat hanya selama uji berjalan. -->
+    <section class="panel" id="racePanel" hidden>
+      <div class="block-head">
+        <h2>Balapan uji</h2>
+        <span class="count" id="raceCount"></span>
+      </div>
+      <div class="race">
+        <div class="race-progress">
+          <svg class="ring" viewBox="0 0 44 44" aria-hidden="true">
+            <circle class="ring-bg" cx="22" cy="22" r="19" />
+            <circle class="ring-fill" id="raceRing" cx="22" cy="22" r="19" />
+          </svg>
+          <div class="race-meta">
+            <span class="race-done" id="raceDone">0/0</span>
+            <span class="race-note" id="raceNote">menyiapkan…</span>
+          </div>
+        </div>
+        <div class="race-list" id="raceList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="rankingPanel" hidden>
+      <div class="block-head">
+        <h2>Peringkat</h2>
+        <span class="count" id="rankingCount"></span>
+      </div>
+      <div class="ranking" id="ranking"></div>
+    </section>
+
+    <section class="panel" id="chartPanel" hidden>
+      <div class="block-head">
+        <h2>Diagram</h2>
+        <span class="count" id="chartCount"></span>
+      </div>
+
+      <figure class="chart">
+        <figcaption>
+          <span class="chart-title">Timeline durasi</span>
+          <span class="chart-sub">TTFT + waktu generasi = total · diurutkan dari tercepat</span>
+        </figcaption>
+        <div class="chart-canvas" id="chartTimeline"></div>
+      </figure>
+
+      <figure class="chart">
+        <figcaption>
+          <span class="chart-title">Kecepatan generasi (TPS)</span>
+          <span class="chart-sub">token per detik setelah token pertama</span>
+        </figcaption>
+        <div class="chart-canvas" id="chartTps"></div>
+      </figure>
+
+      <figure class="chart">
+        <figcaption>
+          <span class="chart-title">Sebaran TTFT × TPS</span>
+          <span class="chart-sub">makin ke kiri-atas makin baik</span>
+        </figcaption>
+        <div class="chart-canvas" id="chartScatter"></div>
+      </figure>
+
+      <figure class="chart" id="boxFigure" hidden>
+        <figcaption>
+          <span class="chart-title">Sebaran antar-ulangan</span>
+          <span class="chart-sub">stabilitas tiap model pada N× pengulangan</span>
+          <span class="segmented sm" id="boxMetric">
+            <button type="button" data-metric="tps" class="active">TPS</button>
+            <button type="button" data-metric="ttft">TTFT</button>
+            <button type="button" data-metric="e2e">E2E</button>
+          </span>
+        </figcaption>
+        <div class="chart-canvas" id="chartBox"></div>
+      </figure>
+    </section>
+
+    <section class="panel" id="tablePanel" hidden>
+      <div class="block-head">
+        <h2>Perbandingan metrik</h2>
+        <div class="export-row">
+          <span class="count">klik header untuk mengurutkan</span>
+          <button class="ghost-btn" id="btnExportHtml" type="button">Laporan HTML</button>
+          <button class="ghost-btn" id="btnExportCsv" type="button">CSV</button>
+          <button class="ghost-btn" id="btnExportJson" type="button">JSON</button>
+          <button class="ghost-btn" id="btnExportMd" type="button">Markdown</button>
+        </div>
+      </div>
+      <div class="stat-strip" id="statStrip" hidden></div>
+      <div class="table-wrap">
+        <table class="metrics" id="metricsTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-key="model">Model</th>
+              <th class="sortable num" data-key="ttft">TTFT</th>
+              <th class="sortable num" data-key="total">Total</th>
+              <th class="sortable num" data-key="e2e">E2E</th>
+              <th class="sortable num" data-key="tokens">Token</th>
+              <th class="sortable num" data-key="tps">TPS</th>
+              <th class="sortable num" data-key="chars">Karakter</th>
+              <th>Status</th>
+              <th class="act" aria-label="Aksi"></th>
+            </tr>
+          </thead>
+          <tbody id="metricsBody"></tbody>
+        </table>
+      </div>
+      <p class="legend">
+        <b>E2E</b> latensi end-to-end: dari prompt dikirim hingga seluruh jawaban diterima, diukur di browser
+        (termasuk waktu tunggu retry) · <b>TTFT</b> waktu ke token pertama · <b>TOTAL</b> durasi di sisi provider
+        sampai stream selesai · <b>TPS</b> token per detik setelah token pertama · token ditandai <i>~</i> bila
+        provider tidak mengirim usage · arahkan kursor ke sel metrik untuk <b>p95</b> &amp; simpangan baku
+        (uji N×) · tanda <b>▲/▼</b> pada nama model adalah perubahan total dibanding uji sebelumnya.
+      </p>
+    </section>
+
+    <section class="panel" id="answersPanel" hidden>
+      <div class="block-head">
+        <h2>Perbandingan jawaban</h2>
+        <div class="row">
+          <button class="ghost-btn accent" id="btnRetryFailed" type="button" hidden>Ulang yang gagal</button>
+          <div class="segmented" id="viewToggle">
+            <button type="button" data-view="list" class="active">Daftar</button>
+            <button type="button" data-view="grid">Berdampingan</button>
+          </div>
+        </div>
+      </div>
+      <div class="compare-bar" id="compareBar" hidden></div>
+      <div class="answers" id="answers" data-view="list"></div>
+    </section>
+
+    <section class="panel" id="historyPanel" hidden>
+      <div class="block-head">
+        <h2>Riwayat uji</h2>
+        <button class="ghost-btn" id="btnClearHistory" type="button">Bersihkan riwayat</button>
+      </div>
+      <div class="history" id="historyList"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Notifikasi ringkas di kanan bawah. -->
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<dialog class="keys" id="keysDialog">
+  <h3>Pintasan papan tombol</h3>
+  <ul>
+    <li><kbd>Ctrl</kbd> + <kbd>Enter</kbd><span>Jalankan uji</span></li>
+    <li><kbd>Ctrl</kbd> + <kbd>K</kbd><span>Cari model</span></li>
+    <li><kbd>R</kbd><span>Kembalikan skala semua diagram</span></li>
+    <li><kbd>C</kbd><span>Bandingkan jawaban terpilih</span></li>
+    <li><kbd>Esc</kbd><span>Batalkan uji / tutup dialog</span></li>
+  </ul>
+  <p class="note">Pintasan tunggal tidak aktif saat kursor berada di kolom teks.</p>
+  <button type="button" class="btn full" id="btnKeysClose">Tutup</button>
+</dialog>
+
+<script src="./charts.js" defer></script>
+<script src="./app.js" defer></script>
+</body>
+</html>
